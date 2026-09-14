@@ -1,0 +1,59 @@
+# One-click deployment on Render: an API, a static site and a Postgres database.
+# Render reads this file and creates all three (Blueprint > New from repo).
+services:
+  - type: web
+    name: playnext-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: playnext-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true          # Render generates and stores a strong value
+      - key: CORS_ORIGINS
+        fromService:
+          name: playnext-web
+          type: web
+          property: hostport
+      - key: PUBLIC_API_URL
+        fromService:
+          name: playnext-api
+          type: web
+          property: hostport
+      - key: FRONTEND_URL
+        fromService:
+          name: playnext-web
+          type: web
+          property: hostport
+      # add these two in the dashboard - they're secrets, so not in the repo
+      - key: IGDB_CLIENT_ID
+        sync: false
+      - key: IGDB_CLIENT_SECRET
+        sync: false
+      - key: STEAM_API_KEY
+        sync: false
+
+  - type: web
+    name: playnext-web
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: playnext-api
+          type: web
+          property: hostport
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: playnext-db
+    databaseName: playnext
+    plan: free
