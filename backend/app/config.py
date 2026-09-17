@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     verify_token_hours: int = 48
     reset_token_hours: int = 1
 
+    # One-click demo sign-in. On for a portfolio deployment so a recruiter can
+    # look around without registering; turn off for anything real.
+    enable_demo_login: bool = True
+    demo_email: str = "demo@playnext.app"
+
     igdb_client_id: str = ""
     igdb_client_secret: str = ""
     steam_api_key: str = ""

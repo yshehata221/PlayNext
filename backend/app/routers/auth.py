@@ -99,6 +99,29 @@ def reset_password(body: ResetPassword, db: Session = Depends(get_db)):
     return Token(access_token=create_token(user.id))
 
 
+@router.post("/demo", response_model=Token)
+@limiter.limit("30/minute")
+def demo_login(request: Request, db: Session = Depends(get_db)):
+    """
+    One-click sign-in to the demo account, so someone evaluating the project
+    can see a populated library immediately instead of registering and then
+    facing an empty app. Seeds the account on first use, which also means a
+    fresh deployment needs no manual setup step.
+    """
+    if not settings.enable_demo_login:
+        raise HTTPException(404, "Demo sign-in is disabled")
+
+    user = db.query(User).filter(User.email == settings.demo_email).first()
+    if user is None:
+        from ..demo import seed
+
+        seed(db, quiet=True)   # uses this request's session, so tests and requests agree
+        user = db.query(User).filter(User.email == settings.demo_email).first()
+        if user is None:
+            raise HTTPException(503, "Demo account could not be created")
+    return Token(access_token=create_token(user.id))
+
+
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)):
     return user

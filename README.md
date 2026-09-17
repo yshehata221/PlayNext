@@ -21,9 +21,12 @@ Every recommendation explains itself. There are no opaque scores.
 
 ## Live demo
 
-> **Not deployed yet.** `render.yaml` and `railway.json` are in the repo and the
-> [deployment guide](#deploying-it) walks through it. Replace this section with the URL and
-> `demo@playnext.app / demo1234` once it is up.
+**[yshehata221.github.io/playnext](https://yshehata221.github.io/playnext)** — click
+**"Take a look around"** to sign straight into a demo account with a real library, ratings and a
+friend to compare with. No registration.
+
+> The API runs on a free tier that sleeps when idle, so the first request can take up to a
+> minute. The app says so while it waits rather than looking broken.
 
 ## Screenshots
 
@@ -60,6 +63,8 @@ Every recommendation explains itself. There are no opaque scores.
   from the same similarity engine.
 - **Friends & co-op picks** — add people by username, then get games you **both** own that
   actually support playing together, ranked by both tastes averaged.
+- **Demo sign-in** — one button signs into a populated account (library, ratings, playtime and a
+  friend), seeding it on first use so a fresh deployment needs no manual setup.
 - **Accounts** — unique usernames, email confirmation, and password reset by email. Tokens are
   stored only as hashes, expire, and work once. "Forgot password" gives the same response whether
   or not the address exists, so it can't be used to discover who has registered.
@@ -192,7 +197,7 @@ titles, the launcher, and a Store ID — nothing else.
 ## Testing
 
 ```bash
-cd backend && pytest          # 67 tests
+cd backend && pytest          # 69 tests
 cd frontend && npm test       # 7 tests
 ```
 
@@ -201,18 +206,36 @@ never touches a third-party API.
 
 ## Deploying it
 
-The repo contains a Render blueprint (`render.yaml`) that creates an API, a static frontend and a
-Postgres database in one go, and a `railway.json` for Railway.
+GitHub Pages can only serve static files, so the frontend and the API are deployed separately:
+**frontend on Pages, API on Render's free tier.**
 
-1. Push to GitHub.
-2. **Render** → New → Blueprint → pick the repo. It reads `render.yaml`.
-3. Add `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` and `STEAM_API_KEY` in the dashboard (they are
-   marked `sync: false` so secrets stay out of the repo). `SECRET_KEY` is generated for you.
-4. In the API service shell, run `python -m app.demo` to seed the demo account.
-5. Put the URL and demo credentials at the top of this README.
+**1. API on Render**
 
-`CORS_ORIGINS`, `PUBLIC_API_URL` and `FRONTEND_URL` are wired between services by the blueprint.
-`VITE_API_URL` is inlined into the frontend bundle at build time.
+- New → Blueprint → pick this repo. It reads `render.yaml` and creates the web service plus a
+  Postgres database.
+- Add `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` and `STEAM_API_KEY` in the dashboard — they are
+  marked `sync: false` so secrets never enter the repo. `SECRET_KEY` is generated automatically.
+- Set `CORS_ORIGINS` to the Pages URL, and `FRONTEND_URL` to the same (it is what email links are
+  built from).
+- Migrations run on boot; the demo account seeds itself the first time anyone uses demo sign-in.
+
+**2. Frontend on GitHub Pages**
+
+- Settings → Pages → Source: **GitHub Actions**.
+- Settings → Secrets and variables → Actions → **Variables** → add `API_URL` =
+  `https://your-service.onrender.com`.
+- Push to `main`. `.github/workflows/pages.yml` runs the tests, builds with the right base path,
+  copies `index.html` to `404.html` so deep links work, and publishes.
+
+**Alternatively**, `render.yaml` can host both halves on Render, which avoids the split and the
+CORS configuration. Pages is only better if the frontend should live on a `github.io` URL.
+
+### Why not GitHub Pages alone?
+
+Pages has no server-side runtime and no database. Running the whole app there would mean giving up
+the recommender, the library, the third-party integrations and authentication — which is to say,
+all of it. The split keeps the static frontend free and fast while the API runs where it can
+actually execute code.
 
 ## Engineering notes
 

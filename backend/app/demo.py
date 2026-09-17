@@ -11,6 +11,8 @@ comparison all have something real to work with.
 import random
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy.orm import Session
+
 from .auth import hash_password
 from .database import Base, SessionLocal, engine, ensure_columns
 from .models import Friendship, FriendState, Game, LibraryEntry, Status, User
@@ -96,27 +98,37 @@ def _stock(db, user: User, rows: list[tuple], rng: random.Random) -> int:
     return added
 
 
-def main() -> None:
+def seed(db: Session, quiet: bool = False) -> None:
+    """
+    Populate the demo accounts in an existing session. Takes the session rather
+    than opening its own so it can run inside a request (the one-click demo
+    login seeds on first use) as well as from the command line.
+    """
     rng = random.Random(7)  # fixed seed: the demo looks the same every deploy
-    # make sure the schema exists: this script is often the first thing run on
-    # a fresh deployment, before the app itself has started
-    Base.metadata.create_all(bind=engine)
-    ensure_columns()
-    with SessionLocal() as db:
-        seeded = seed_games(db)
-        demo, friend = _user(db, DEMO), _user(db, FRIEND)
-        db.flush()
+    seeded = seed_games(db)
+    demo, friend = _user(db, DEMO), _user(db, FRIEND)
+    db.flush()
 
-        a = _stock(db, demo, DEMO_LIBRARY, rng)
-        b = _stock(db, friend, FRIEND_LIBRARY, rng)
+    a = _stock(db, demo, DEMO_LIBRARY, rng)
+    b = _stock(db, friend, FRIEND_LIBRARY, rng)
 
-        if not db.query(Friendship).filter_by(requester_id=demo.id, addressee_id=friend.id).first():
-            db.add(Friendship(requester_id=demo.id, addressee_id=friend.id, state=FriendState.accepted))
+    if not db.query(Friendship).filter_by(requester_id=demo.id, addressee_id=friend.id).first():
+        db.add(Friendship(requester_id=demo.id, addressee_id=friend.id, state=FriendState.accepted))
 
-        db.commit()
+    db.commit()
+    if not quiet:
         print(f"catalogue: +{seeded} games")
         print(f"{DEMO['email']} / {DEMO['password']}  (+{a} games)")
         print(f"{FRIEND['email']} / {FRIEND['password']}  (+{b} games, already friends with demo)")
+
+
+def main() -> None:
+    # run standalone: make sure the schema exists first, since this is often the
+    # first thing executed on a fresh deployment
+    Base.metadata.create_all(bind=engine)
+    ensure_columns()
+    with SessionLocal() as db:
+        seed(db)
 
 
 if __name__ == "__main__":

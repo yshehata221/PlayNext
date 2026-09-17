@@ -1,9 +1,34 @@
+import { Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
 export default function Login() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, acceptToken } = useAuth();
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoAvailable, setDemoAvailable] = useState(false);
+  const [waking, setWaking] = useState(false);
+
+  // only show the button if this deployment actually has demo sign-in enabled
+  useEffect(() => { api.config().then((c) => setDemoAvailable(c.demo_login)).catch(() => setDemoAvailable(false)); }, []);
+
+  const demo = async () => {
+    setDemoBusy(true);
+    setError(null);
+    // free backend hosting sleeps when idle and takes up to a minute to wake,
+    // so tell the user that's what the wait is rather than letting it look broken
+    const slow = setTimeout(() => setWaking(true), 4000);
+    try {
+      const { access_token } = await api.demoLogin();
+      await acceptToken(access_token);
+    } catch (e) {
+      setError((e as Error).message);
+      setDemoBusy(false);
+    } finally {
+      clearTimeout(slow);
+      setWaking(false);
+    }
+  };
   const [mode, setMode] = useState<"in" | "up" | "forgot">("in");
   const [forgotSent, setForgotSent] = useState(false);
   const [email, setEmail] = useState("");
@@ -47,7 +72,24 @@ export default function Login() {
       <h1 className="text-5xl font-extrabold tracking-tight">PlayNext</h1>
       <p className="mt-2 text-lg text-fog">Stop scrolling. Start playing.</p>
 
-      <div className="mt-10 space-y-3">
+      {demoAvailable && (
+        <div className="mt-8">
+          <button onClick={demo} disabled={demoBusy}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber py-3 font-semibold text-ink hover:brightness-110 disabled:opacity-60">
+            <Play size={17} className="fill-ink" />{demoBusy ? "Setting up the demo…" : "Take a look around"}
+          </button>
+          <p className="mt-2 text-center text-xs text-fog">
+            {waking
+              ? "Waking the server up — free hosting sleeps when idle, so this first load can take up to a minute."
+              : "Signs you into a demo account with a real library, ratings and a friend to compare with. No sign-up needed."}
+          </p>
+          <div className="mt-6 flex items-center gap-3 text-xs text-fog">
+            <span className="h-px flex-1 bg-line" />or use your own account<span className="h-px flex-1 bg-line" />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 space-y-3">
         {mode === "up" && (
           <>
             <input className={field} placeholder="What should we call you?" value={name} onChange={(e) => setName(e.target.value)} />

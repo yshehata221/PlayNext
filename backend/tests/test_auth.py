@@ -40,3 +40,30 @@ def test_username_rules_are_enforced(client):
 
     assert client.get("/auth/username-available/ab").json()["available"] is False
     assert client.get("/auth/username-available/freehandle").json()["available"] is True
+
+
+def test_demo_login_seeds_and_signs_in(client):
+    """A recruiter clicking one button should land in a populated library."""
+    r = client.post("/auth/demo")
+    assert r.status_code == 200
+    token = r.json()["access_token"]
+
+    me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.json()["username"] == "demo"
+    # the account arrives with games, ratings and a friend to compare with
+    library = client.get("/library", headers={"Authorization": f"Bearer {token}"}).json()
+    assert len(library) > 10
+    assert any(e["rating"] for e in library)
+    assert client.get("/friends", headers={"Authorization": f"Bearer {token}"}).json()
+
+    # repeat visits reuse the same account rather than duplicating anything
+    again = client.post("/auth/demo")
+    assert again.status_code == 200
+    assert len(client.get("/library", headers={"Authorization": f"Bearer {token}"}).json()) == len(library)
+
+
+def test_demo_login_can_be_disabled(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "enable_demo_login", False)
+    assert client.post("/auth/demo").status_code == 404

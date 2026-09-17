@@ -1,0 +1,67 @@
+# Publishes the frontend to GitHub Pages on every push to main.
+#
+# Pages can only serve static files, so the FastAPI backend has to live
+# elsewhere (Render's free tier works). Set two repository settings first:
+#   Settings > Pages > Source: GitHub Actions
+#   Settings > Secrets and variables > Actions > Variables > New:
+#       API_URL = https://your-backend.onrender.com
+name: Deploy frontend to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# a queued deploy replaces an in-progress one rather than racing it
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test
+
+      - name: Build
+        env:
+          # a project site is served from /<repo>/, so assets need that prefix
+          BASE_PATH: /${{ github.event.repository.name }}/
+          # inlined into the bundle at build time
+          VITE_API_URL: ${{ vars.API_URL }}
+        run: npm run build
+
+      - name: Add SPA fallback
+        # Pages has no rewrite rules, so a deep link like /library would 404.
+        # Copying index.html to 404.html makes Pages serve the app instead and
+        # lets the router take over.
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

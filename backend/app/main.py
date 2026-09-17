@@ -97,6 +97,7 @@ def config():
         "igdb_catalogue": bool(settings.igdb_client_id and settings.igdb_client_secret),
         "email": settings.mail_mode == "smtp" and bool(settings.smtp_host),
         "require_email_verification": settings.require_email_verification,
+        "demo_login": settings.enable_demo_login,
     }
 
 

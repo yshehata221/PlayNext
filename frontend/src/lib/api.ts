@@ -189,12 +189,14 @@ export interface ServerConfig {
   igdb_catalogue: boolean;
   email: boolean;
   require_email_verification: boolean;
+  demo_login: boolean;
 }
 
 export const api = {
   config: () => request<ServerConfig>("/config", null),
   register: (email: string, display_name: string, username: string, password: string) =>
     request<{ access_token: string }>("/auth/register", null, { method: "POST", body: JSON.stringify({ email, display_name, username, password }) }),
+  demoLogin: () => request<{ access_token: string }>("/auth/demo", null, { method: "POST" }),
   usernameAvailable: (username: string) =>
     request<{ available: boolean; reason: string | null }>(`/auth/username-available/${encodeURIComponent(username)}`, null),
   login: (email: string, password: string) =>
