@@ -30,16 +30,21 @@ friend to compare with. No registration.
 
 ## Screenshots
 
-> Add four images to `docs/` and they will appear here:
-> `docs/tonight.png`, `docs/library.png`, `docs/game.png`, `docs/profile.png`
+**Tonight** — one pick, with the reasons that produced it
 
-| Tonight | Library |
-|---|---|
-| ![Tonight](docs/tonight.png) | ![Library](docs/library.png) |
+![Tonight](docs/tonight.png)
 
-| Game page | Profile |
+**Library** — your games from every launcher, with the best match and backlog alongside
+
+![Library](docs/library.png)
+
+**Browse** — every game on every platform, filterable and wishlistable
+
+![Browse](docs/browse.png)
+
+| Friends — what you two should play | Profile — what kind of gamer you are |
 |---|---|
-| ![Game page](docs/game.png) | ![Profile](docs/profile.png) |
+| ![Friends](docs/friends.png) | ![Profile](docs/profile.png) |
 
 ## What it does
 
