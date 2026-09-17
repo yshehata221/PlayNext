@@ -25,6 +25,8 @@ Every recommendation explains itself. There are no opaque scores.
 **"Take a look around"** to sign straight into a demo account with a real library, ratings and a
 friend to compare with. No registration.
 
+https://github.com/user-attachments/assets/6808de60-5dbf-40b0-857d-2e897e598122
+
 > The API runs on a free tier that sleeps when idle, so the first request can take up to a
 > minute. The app says so while it waits rather than looking broken.
 
