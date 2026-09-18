@@ -19,14 +19,30 @@ abandoned, and answers one question: **what should I play tonight?**
 
 Every recommendation explains itself. There are no opaque scores.
 
-## Live demo
+## Try it
 
-**[yshehata221.github.io/playnext](https://yshehata221.github.io/playnext)** — click
-**"Take a look around"** to sign straight into a demo account with a real library, ratings and a
-friend to compare with. No registration.
+**▶ [Live demo](https://yshehata221.github.io/playnext)** — opens straight into a sample account
+with a real library, ratings, a backlog and a friend to compare with. Rate things, change
+statuses, plan a night. No sign-up, nothing to install.
 
-> The API runs on a free tier that sleeps when idle, so the first request can take up to a
-> minute. The app says so while it waits rather than looking broken.
+**⬇ [Download for Windows](https://github.com/yshehata221/playnext/releases/latest)** — the same
+app as a single `PlayNext.exe`. Double-click it and it opens in your browser, keeps its data
+locally, and can scan your PC for installed games.
+
+<details>
+<summary>How the live demo works</summary>
+
+GitHub Pages serves static files only, so the demo build ships a snapshot of the real API's
+responses (captured by `python -m app.snapshot`) and answers every request from it in the browser.
+Reads come from the snapshot; edits are applied to an in-memory copy and reset on refresh.
+
+It's a deliberate trade: a demo that always loads instantly, costs nothing and can't break, versus
+one that needs a server kept awake. Features that genuinely need a backend — importing a library,
+signing in with Steam, creating an account — say so rather than failing.
+
+To run the demo against a real API instead, set an `API_URL` repository variable and the Pages
+workflow builds against that.
+</details>
 
 ## Screenshots
 
@@ -132,6 +148,25 @@ React 18 + TypeScript + Vite + Tailwind
 | External | IGDB (via Twitch OAuth), Steam Web API, Steam store, Microsoft Store catalogue |
 | Infra | Docker, Docker Compose, GitHub Actions, Render/Railway configs |
 
+## Desktop app
+
+`PlayNext.exe` is the whole application in one file: the API, the frontend and a local SQLite
+database, with no Python or Node needed. It picks a free port, serves the built frontend from the
+same process, opens your browser at it, and stores data in `%LOCALAPPDATA%\PlayNext` so replacing
+the executable never loses a library.
+
+Built by `.github/workflows/desktop.yml` on every tagged release — including a smoke test that
+starts the binary and checks it stays up, because PyInstaller bundles that build but can't boot are
+a common failure. Windows SmartScreen warns about unsigned executables; signing needs a paid
+certificate this project doesn't have.
+
+```bash
+# building it yourself
+cd frontend && npm ci && npm run build
+cp -r dist ../backend/static
+cd ../backend && pip install pyinstaller && pyinstaller playnext.spec
+```
+
 ## Running it locally
 
 Nothing is required beyond Python 3.12 and Node 20. With no configuration at all it runs on
@@ -214,17 +249,27 @@ never touches a third-party API.
 GitHub Pages can only serve static files, so the frontend and the API are deployed separately:
 **frontend on Pages, API on Render's free tier.**
 
-**1. API on Render**
+**1. Database on Neon**
 
-- New → Blueprint → pick this repo. It reads `render.yaml` and creates the web service plus a
-  Postgres database.
-- Add `IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET` and `STEAM_API_KEY` in the dashboard — they are
-  marked `sync: false` so secrets never enter the repo. `SECRET_KEY` is generated automatically.
-- Set `CORS_ORIGINS` to the Pages URL, and `FRONTEND_URL` to the same (it is what email links are
-  built from).
-- Migrations run on boot; the demo account seeds itself the first time anyone uses demo sign-in.
+Render's free Postgres is deleted 30 days after creation, so the database lives on
+[Neon](https://neon.tech) instead, whose free tier persists. Create a project, copy the
+connection string — the app rewrites it for its driver, so it can be pasted verbatim.
 
-**2. Frontend on GitHub Pages**
+**2. API on Render**
+
+- New → Blueprint → pick this repo. It reads `render.yaml`.
+- Paste the Neon connection string into `DATABASE_URL`, and add `IGDB_CLIENT_ID`,
+  `IGDB_CLIENT_SECRET` and `STEAM_API_KEY` if you have them. All are marked `sync: false` so
+  secrets never enter the repo; `SECRET_KEY` is generated automatically.
+- Migrations run on boot, and the demo account seeds itself the first time anyone uses demo
+  sign-in — so there is no manual setup step.
+
+**3. Frontend — Render static site (recommended) or GitHub Pages**
+
+The blueprint creates a Render static site alongside the API, which is always on with no cold
+start and wires `VITE_API_URL` automatically. Nothing else to do.
+
+To use GitHub Pages instead:
 
 - Settings → Pages → Source: **GitHub Actions**.
 - Settings → Secrets and variables → Actions → **Variables** → add `API_URL` =

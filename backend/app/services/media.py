@@ -5,11 +5,13 @@ if this ever runs on more than one box.
 """
 import base64
 import binascii
+import os
 from pathlib import Path
 
 from ..config import settings
 
-MEDIA_DIR = Path(__file__).resolve().parents[2] / "media"
+# overridable, because the packaged desktop app can't write next to its .exe
+MEDIA_DIR = Path(os.environ.get("MEDIA_DIR") or Path(__file__).resolve().parents[2] / "media")
 COVERS = MEDIA_DIR / "covers"
 EXT = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
 

@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { DEMO_MODE } from "./demo/mockApi";
 import { api, type ServerConfig } from "./lib/api";
 import BottomNav from "./components/BottomNav";
+import DemoBanner from "./components/DemoBanner";
 import Footer from "./components/Footer";
 import VerifyBanner from "./components/VerifyBanner";
 import Sidebar from "./components/Sidebar";
@@ -46,7 +48,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <VerifyBanner mailEnabled={config?.email ?? false} />
+      {DEMO_MODE ? <DemoBanner /> : <VerifyBanner mailEnabled={config?.email ?? false} />}
       <TopBar />
       <div className="flex flex-1">
         <Sidebar counts={counts} />

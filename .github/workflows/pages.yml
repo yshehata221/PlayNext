@@ -1,10 +1,15 @@
 # Publishes the frontend to GitHub Pages on every push to main.
 #
-# Pages can only serve static files, so the FastAPI backend has to live
-# elsewhere (Render's free tier works). Set two repository settings first:
+# Pages serves static files only, so by default this builds the *demo* build:
+# every API call is answered from a captured snapshot in the browser, which
+# means the demo works with no backend, no hosting bill and no cold start.
+#
+# To point it at a real API instead, add a repository variable API_URL
+# (Settings > Secrets and variables > Actions > Variables) and the workflow
+# will build against that rather than the snapshot.
+#
+# One setting is required either way:
 #   Settings > Pages > Source: GitHub Actions
-#   Settings > Secrets and variables > Actions > Variables > New:
-#       API_URL = https://your-backend.onrender.com
 name: Deploy frontend to Pages
 
 on:
@@ -44,6 +49,8 @@ jobs:
           BASE_PATH: /${{ github.event.repository.name }}/
           # inlined into the bundle at build time
           VITE_API_URL: ${{ vars.API_URL }}
+          # with no API_URL set, ship the self-contained snapshot demo
+          VITE_DEMO_MODE: ${{ vars.API_URL == '' && '1' || '0' }}
         run: npm run build
 
       - name: Add SPA fallback

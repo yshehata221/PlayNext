@@ -57,6 +57,15 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+# Hosted Postgres providers hand out URLs like `postgresql://...` (or the legacy
+# `postgres://`), but SQLAlchemy needs the driver named. Rewriting it here means
+# a connection string can be pasted straight from Neon, Render or Supabase
+# without editing.
+if settings.database_url.startswith(("postgres://", "postgresql://")):
+    settings.database_url = settings.database_url.replace(
+        "postgres://", "postgresql+psycopg://", 1
+    ).replace("postgresql://", "postgresql+psycopg://", 1)
+
 # a default secret is fine locally and dangerous in production, so say so loudly
 if settings.is_production and settings.secret_key == "dev-only-change-me":
     import warnings

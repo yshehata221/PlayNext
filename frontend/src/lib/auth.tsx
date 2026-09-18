@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api";
+import { DEMO_MODE } from "../demo/mockApi";
 
 interface User { id: number; email: string; display_name: string; username: string | null; steam_id: string | null; email_verified: boolean }
 
@@ -19,7 +20,9 @@ const Ctx = createContext<AuthCtx>(null!);
 const KEY = "playnext.token";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(KEY));
+  const [token, setToken] = useState<string | null>(
+    () => (DEMO_MODE ? "demo-mode-token" : localStorage.getItem(KEY)),
+  );
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(!!token);
 

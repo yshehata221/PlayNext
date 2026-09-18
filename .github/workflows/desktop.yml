@@ -1,0 +1,87 @@
+# Builds the Windows desktop app and attaches it to a GitHub Release.
+#
+#   git tag v1.0.0 && git push --tags
+#
+# ...produces PlayNext.exe on the release page. Also runnable by hand from the
+# Actions tab, which uploads the .exe as a build artifact instead.
+name: Build desktop app
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build the frontend
+        working-directory: frontend
+        env:
+          # the desktop app serves the API from its own origin, so relative
+          # paths are correct and no VITE_API_URL is needed
+          VITE_API_URL: ""
+        run: |
+          npm ci
+          npm run build
+
+      - name: Move the bundle in with the backend
+        run: |
+          New-Item -ItemType Directory -Force -Path backend/static | Out-Null
+          Copy-Item -Recurse -Force frontend/dist/* backend/static/
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller==6.11.1
+
+      - name: Build the executable
+        working-directory: backend
+        run: pyinstaller playnext.spec --noconfirm
+
+      - name: Smoke test
+        working-directory: backend
+        # start it, check it answers, then stop - catches a bundle that builds
+        # but can't actually boot, which PyInstaller does more often than you'd like
+        run: |
+          $proc = Start-Process -FilePath dist/PlayNext.exe -PassThru
+          Start-Sleep -Seconds 25
+          if ($proc.HasExited) { throw "PlayNext.exe exited immediately (code $($proc.ExitCode))" }
+          Stop-Process -Id $proc.Id -Force
+          Write-Host "started and stayed running"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PlayNext-windows
+          path: backend/dist/PlayNext.exe
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: backend/dist/PlayNext.exe
+          body: |
+            **PlayNext desktop — Windows**
+
+            Download `PlayNext.exe` below and double-click it. No installation, no Python needed.
+            It opens in your browser at a local address and keeps its data in `%LOCALAPPDATA%\PlayNext`.
+
+            Windows SmartScreen will warn about an unsigned executable: *More info → Run anyway*.
+            Signing requires a paid certificate, which this project doesn't have.

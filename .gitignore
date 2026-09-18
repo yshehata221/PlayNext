@@ -7,3 +7,8 @@ node_modules/
 dist/
 .pytest_cache/
 media/
+
+static/
+dist/
+build/
+*.spec.bak

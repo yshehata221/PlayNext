@@ -8,6 +8,7 @@ import { PlatformPicker } from "../components/Platform";
 import { LIBRARY_STATUSES, STATUS_LABEL } from "../components/StatusChip";
 import { api, type Entry, type Game, type Status } from "../lib/api";
 import { parseQuery } from "../lib/filters";
+import { DEMO_MODE } from "../demo/mockApi";
 import { useAuth } from "../lib/auth";
 
 // Launcher tooling an early version of the scanner mistook for games. The
@@ -397,9 +398,18 @@ function ImportGames({ onClose, onDone }: { onClose: () => void; onDone: (msg: s
   return (
     <Modal onClose={onClose}>
       <h2 className="text-xl font-bold">Import games</h2>
-      <p className="mt-1 text-sm text-fog">Steam is the only platform that lets apps read your library directly. The routes below cover everything else.</p>
+      {DEMO_MODE ? (
+        <p className="mt-2 rounded-xl bg-field p-4 text-sm text-fog">
+          Importing needs the full app — this demo runs in your browser with no server behind it.
+          In the real thing there are three routes: sign in with Steam, run a small scanner that
+          detects games installed across seven launchers, or paste a list of titles for
+          PlayStation and Switch.
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-fog">Steam is the only platform that lets apps read your library directly. The routes below cover everything else.</p>
+      )}
 
-      <div className="mt-5 rounded-xl bg-field p-4">
+      <div className={`mt-5 rounded-xl bg-field p-4 ${DEMO_MODE ? "hidden" : ""}`}>
         <h3 className="font-semibold">Everything you own on Steam</h3>
         {config?.steam_import === false ? (
           <p className="mt-1 text-sm text-fog">
@@ -419,7 +429,7 @@ function ImportGames({ onClose, onDone }: { onClose: () => void; onDone: (msg: s
         )}
       </div>
 
-      <div className="mt-3 rounded-xl bg-field p-4">
+      <div className={`mt-3 rounded-xl bg-field p-4 ${DEMO_MODE ? "hidden" : ""}`}>
         <h3 className="font-semibold">Everything installed on this PC</h3>
         <p className="mt-1 text-sm text-fog">
           Epic, GOG, Ubisoft, EA, Battle.net, Xbox and Game Pass don't offer sign-in imports, so a small scanner
@@ -436,7 +446,7 @@ function ImportGames({ onClose, onDone }: { onClose: () => void; onDone: (msg: s
         </ol>
       </div>
 
-      <div className="mt-3 rounded-xl bg-field p-4">
+      <div className={`mt-3 rounded-xl bg-field p-4 ${DEMO_MODE ? "hidden" : ""}`}>
         <h3 className="font-semibold">PlayStation, Switch and everything else</h3>
         <p className="mt-1 text-sm text-fog">
           Sony, Nintendo, Epic and Blizzard don't publish a way for apps to read your library, so there's nothing
