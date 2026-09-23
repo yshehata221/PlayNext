@@ -160,7 +160,10 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 
 // In development Vite proxies /api to the backend. In production the two are
 // usually separate services, so the base URL comes from the build environment.
-const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
+// `||` not `??`: a build that sets VITE_API_URL to an empty string means "no
+// separate API", which should fall back to the proxy path, and an empty string
+// is not nullish.
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {

@@ -186,6 +186,44 @@ function newEntry(game: Json, status: string, platform = "steam"): Json {
   };
 }
 
+// Every path the API serves. Used to decide what to intercept, because the
+// request prefix depends on how the bundle was built: "/api" behind the dev
+// proxy, bare paths when no separate API URL was configured.
+const API_ROOTS = [
+  "/auth", "/library", "/browse", "/friends", "/wishlist", "/stats",
+  "/recommendations", "/games", "/steam", "/config", "/health",
+];
+
+/**
+ * Work out which API path a request is for, or null if it isn't one of ours.
+ * Exported for testing: getting this wrong sends demo traffic to the real
+ * network, which is exactly how the first deploy of the demo broke.
+ */
+export function apiPath(url: string): string | null {
+  let path = url;
+  try {
+    // absolute URLs (the app builds some) reduce to their path
+    path = new URL(url, window.location.href).pathname + new URL(url, window.location.href).search;
+  } catch {
+    /* relative string: use as-is */
+  }
+
+  const marker = "/api/";
+  const index = path.indexOf(marker);
+  if (index !== -1) return path.slice(index + marker.length - 1);
+
+  // no /api prefix: match the API's own roots, ignoring any base path the site
+  // is served under (a GitHub Pages project site lives at /<repo>/)
+  for (const root of API_ROOTS) {
+    const at = path.indexOf(root);
+    if (at !== -1) {
+      const after = path[at + root.length];
+      if (after === undefined || after === "/" || after === "?") return path.slice(at);
+    }
+  }
+  return null;
+}
+
 /** Patch fetch so every call the app makes is answered locally. */
 export function installDemoApi(): void {
   const original = window.fetch.bind(window);
@@ -194,12 +232,9 @@ export function installDemoApi(): void {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
 
     // only intercept our own API calls; images and fonts still go to the network
-    const marker = "/api";
-    const index = url.indexOf(marker);
-    if (index === -1 || !url.slice(index + marker.length).startsWith("/")) {
-      return original(input as RequestInfo, init);
-    }
-    const path = url.slice(index + marker.length);
+    const path = apiPath(url);
+    if (path === null) return original(input as RequestInfo, init);
+
     const method = (init.method ?? "GET").toUpperCase();
 
     // a touch of latency, so loading states are visible rather than flashing
