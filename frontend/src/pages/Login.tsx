@@ -9,8 +9,15 @@ export default function Login() {
   const [demoAvailable, setDemoAvailable] = useState(false);
   const [waking, setWaking] = useState(false);
 
-  // only show the button if this deployment actually has demo sign-in enabled
-  useEffect(() => { api.config().then((c) => setDemoAvailable(c.demo_login)).catch(() => setDemoAvailable(false)); }, []);
+  // Show the demo button whenever the server offers it. If /config can't be
+  // reached at all there's no backend behind this build, which is worth saying
+  // plainly instead of letting every sign-in attempt fail.
+  const [noBackend, setNoBackend] = useState(false);
+  useEffect(() => {
+    api.config()
+      .then((c) => setDemoAvailable(c.demo_login))
+      .catch(() => { setDemoAvailable(false); setNoBackend(true); });
+  }, []);
 
   const demo = async () => {
     setDemoBusy(true);
@@ -71,6 +78,13 @@ export default function Login() {
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-5">
       <h1 className="text-5xl font-extrabold tracking-tight">PlayNext</h1>
       <p className="mt-2 text-lg text-fog">Stop scrolling. Start playing.</p>
+
+      {noBackend && (
+        <p className="mt-8 rounded-xl border border-coral/30 bg-panel px-4 py-3 text-sm text-fog">
+          This build can't reach its API, so signing in won't work. If you're looking at the public
+          demo, it should have loaded automatically — try a hard refresh (Ctrl+F5).
+        </p>
+      )}
 
       {demoAvailable && (
         <div className="mt-8">

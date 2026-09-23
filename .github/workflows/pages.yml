@@ -1,15 +1,16 @@
 # Publishes the frontend to GitHub Pages on every push to main.
 #
-# Pages serves static files only, so by default this builds the *demo* build:
-# every API call is answered from a captured snapshot in the browser, which
-# means the demo works with no backend, no hosting bill and no cold start.
+# Pages serves static files only, so this always builds the *demo* build: every
+# API call is answered from a captured snapshot inside the browser. No backend,
+# no hosting bill, no cold start, and nothing that can break later.
 #
-# To point it at a real API instead, add a repository variable API_URL
-# (Settings > Secrets and variables > Actions > Variables) and the workflow
-# will build against that rather than the snapshot.
-#
-# One setting is required either way:
+# Only one repository setting is needed:
 #   Settings > Pages > Source: GitHub Actions
+#
+# To point Pages at a live API instead, set USE_REAL_API and API_URL as
+# repository variables (Settings > Secrets and variables > Actions > Variables).
+# Demo mode stays on unless USE_REAL_API is exactly "true", so a stray API_URL
+# can't silently produce a build with no working backend behind it.
 name: Deploy frontend to Pages
 
 on:
@@ -47,10 +48,9 @@ jobs:
         env:
           # a project site is served from /<repo>/, so assets need that prefix
           BASE_PATH: /${{ github.event.repository.name }}/
-          # inlined into the bundle at build time
-          VITE_API_URL: ${{ vars.API_URL }}
-          # with no API_URL set, ship the self-contained snapshot demo
-          VITE_DEMO_MODE: ${{ vars.API_URL == '' && '1' || '0' }}
+          # both are inlined into the bundle at build time
+          VITE_API_URL: ${{ vars.USE_REAL_API == 'true' && vars.API_URL || '' }}
+          VITE_DEMO_MODE: ${{ vars.USE_REAL_API == 'true' && '0' || '1' }}
         run: npm run build
 
       - name: Add SPA fallback
